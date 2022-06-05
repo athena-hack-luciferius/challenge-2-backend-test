@@ -5,3 +5,13 @@ Content-Type: application/json
     "topic": "pink flowers",
     "adjective": "sunny"
 }
+
+###
+
+POST https://haiku-ai-backend.herokuapp.com/get-haiku
+Content-Type: application/json
+
+{
+    "topic": "morning sun",
+    "adjective": "calm"
+}

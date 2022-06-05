@@ -60,7 +60,7 @@ app.post('/get-haiku', async (req, res) => {
     }*/
 
     haikus = []
-    for (let i = 0; i < 3; i++) {
+    for (let i = 0; i < 1; i++) {
         const haiku = await getHaiku(req);
         if(!haiku){
             res.send("Could not get a valid response from the AI.");
