@@ -1,0 +1,7 @@
+POST http://localhost:3000/get-haiku
+Content-Type: application/json
+
+{
+    "topic": "pink flowers",
+    "adjective": "sunny"
+}
