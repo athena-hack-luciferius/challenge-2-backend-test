@@ -283,6 +283,38 @@ app.post('/set-haiku', async (req, res, next) => {
     }
 });
 
+app.post('/generate-haiku-media', async (req, res, next) => {
+    if(!req.body.message ||
+       !req.body.signature ||
+       !req.body.accountId){
+        res.status(400);
+        res.json({message: "Bad Request - need signedMessage in body."});
+        return;
+    }
+
+    const message = BinArrayToJson(req.body.message);
+
+    if(!message.haiku || !message.title){
+        res.status(400);
+        res.json({message: `Bad Request - the message should contain the haiku to be set.`});
+        return;
+    }
+
+    try{
+        if(!await verify(req.body.message, req.body.signature, req.body.accountId)){
+            res.status(400);
+            res.json({message: "Bad Request - signed message verification failed."});
+            return;
+        }
+
+        const image = await generateImage(message);
+        const imageUrl = await uploadImage(image, message);
+        res.json({media: imageUrl});
+    } catch (error) {
+        next(error);
+    }
+});
+
 //check if theres the environment variable PORT<br>
 const port = process.env.PORT || 3000;
 app.listen(port, function(){
