@@ -186,7 +186,70 @@ const updateNft = async (imageUrl, message) => {
 }
  
 //when we route to /courses
-app.post('/get-haiku', async (req, res, next) => {
+app.post('/generate-ai-prompt', async (req, res, next) => {
+    if(!req.body.message ||
+       !req.body.signature ||
+       !req.body.accountId){
+        res.status(400);
+        res.json({message: "Bad Request - need signedMessage in body."});
+        return;
+    }
+
+    const message = BinArrayToJson(req.body.message);
+
+    if(!message.id){
+        res.status(400);
+        res.json({message: `Bad Request - the message should contain the id of the empty haiku nft.`});
+        return;
+    }
+
+    try {
+        if(!await verify(req.body.message, req.body.signature, req.body.accountId)){
+            res.status(400);
+            res.json({message: "Bad Request - signed message verification failed."});
+            return;
+        }
+
+        if(!await verifyOwnership(req.body.accountId, message.id)){
+            res.status(400);
+            res.json({message: `Bad Request - you don't own the haiku #${message.id}.`});
+            return;
+        }
+
+        if(haikus.has(message.id)){
+            res.status(400);
+            res.json({message: `Bad Request - haiku #${message.id} already has generated prompts. Use 'get-ai-prompt' to retrieve them.`});
+            return;
+        }
+
+        newHaikus = []
+        for (let i = 0; i < 1; i++) {
+            const haiku = await getHaiku(message);
+            if(!haiku){
+                res.send("Could not get a valid response from the AI.");
+                return;
+            }
+            newHaikus.push(haiku);
+        }
+        haikus.set(message.id, newHaikus);
+
+        const result = newHaikus;
+
+        if(!result){
+            res.status(400);
+            res.json({message: `Bad Request - Something went wrong. Please try again`});
+            haikus.delete(message.id);
+            return;
+        }
+
+        res.json(result); //respond with the array of courses
+    } catch (error) {
+        next(error);
+    }
+});
+ 
+//when we route to /courses
+app.post('/get-ai-prompt', async (req, res, next) => {
     if(!req.body.message ||
        !req.body.signature ||
        !req.body.accountId){
@@ -217,16 +280,9 @@ app.post('/get-haiku', async (req, res, next) => {
         }
 
         if(!haikus.has(message.id)){
-            newHaikus = []
-            for (let i = 0; i < 1; i++) {
-                const haiku = await getHaiku(message);
-                if(!haiku){
-                    res.send("Could not get a valid response from the AI.");
-                    return;
-                }
-                newHaikus.push(haiku);
-            }
-            haikus.set(message.id, newHaikus);
+            res.status(400);
+            res.json({message: `Bad Request - haiku #${message.id} does not have generated prompts.`});
+            return;
         }
 
         const result = haikus.get(message.id);
