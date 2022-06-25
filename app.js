@@ -87,15 +87,17 @@ const BinArrayToJson = (binArray) => {
     return JSON.parse(str)
 }
 
-const getHaiku = async (message) => {
+const getHaiku = async (message, lastConversation) => {
     const randomSeed = Math.floor(Math.random() * Math.pow(10, Math.floor(Math.random() * 12)));
-    let prompt = `${randomSeed}\nWrite a haiku`;
+    const prefix = lastConversation ? `${lastConversation}\n\nWrite a different ` : `${randomSeed}\nWrite a `
+    let prompt = `haiku`;
     if(message.adjective){
-        prompt = `${randomSeed}\nWrite a ${message.adjective} haiku`;
+        prompt = `${message.adjective} haiku`;
     }
     if(message.topic){
         prompt += ` about ${message.topic}`;
     }
+    prompt = prefix+prompt;
     console.log(prompt);
     const response = await openai.createCompletion("text-davinci-002", {
         prompt: prompt,
@@ -108,9 +110,9 @@ const getHaiku = async (message) => {
     if (response.status != 200) {
         return None;
     }
-    let haiku = response.data.choices[0].text;
-    haiku = haiku.split('\n').slice(-3).join(" / ");
-    return haiku;
+    let conversation = prompt + response.data.choices[0].text;
+    let haiku = conversation.split('\n').slice(-3).join(" / ");
+    return {haiku, conversation};
 }
 
 const verify = async (message, signature, accountId) => {
@@ -223,13 +225,15 @@ app.post('/generate-ai-prompt', async (req, res, next) => {
         }
 
         newHaikus = []
-        for (let i = 0; i < 1; i++) {
-            const haiku = await getHaiku(message);
+        let lastConversation;
+        for (let i = 0; i < 3; i++) {
+            const {haiku, conversation} = await getHaiku(message, lastConversation);
             if(!haiku){
                 res.send("Could not get a valid response from the AI.");
                 return;
             }
             newHaikus.push(haiku);
+            lastConversation = conversation;
         }
         haikus.set(message.id, newHaikus);
 
